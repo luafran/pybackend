@@ -7,7 +7,7 @@ Author: Min RK <benjaminrk@gmail.com>
 import time
 
 import zmq
-from zmq.eventloop.ioloop import IOLoop, PeriodicCallback
+from zmq.eventloop.ioloop import PeriodicCallback
 from zmq.eventloop.zmqstream import ZMQStream
 
 # States we can be in at any point in time
@@ -34,10 +34,10 @@ class FSMError(Exception):
 
 
 class BinaryStar(object):
-    def __init__(self, primary, local, remote):
+    def __init__(self, loop, primary, local, remote):
         # initialize the Binary Star
         self.ctx = zmq.Context()  # Our private context
-        self.loop = IOLoop.instance()  # Reactor loop
+        self.loop = loop  # Reactor loop
         self.state = STATE_PRIMARY if primary else STATE_BACKUP
 
         self.event = None  # Current event
