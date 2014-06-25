@@ -13,6 +13,7 @@ from kvmsg import KVMsg
 
 SUBTREE = "/client/"
 
+
 def main():
 
     # Prepare our context and subscriber
@@ -43,7 +44,7 @@ def main():
 
         if kvmsg.key == "KTHXBAI":
             sequence = kvmsg.sequence
-            print "I: Received snapshot=%d" % sequence
+            print "I: Received snapshot: %s" % kvmsg
             break          # Done
         kvmsg.store(kvmap)
 
@@ -66,14 +67,15 @@ def main():
                 sequence = kvmsg.sequence
                 kvmsg.store(kvmap)
                 action = "update" if kvmsg.body else "delete"
-                print "I: received %s=%d" % (action, sequence)
+                print "I: received %s: %s" % (action, kvmsg)
 
-        # If we timed-out, generate a random kvmsg
+        # If we timed-out, generate a random kvmsg and push it to server
         if time.time() >= alarm:
             kvmsg = KVMsg(0)
-            kvmsg.key = SUBTREE + "%d" % random.randint(1,10000)
-            kvmsg.body = "%d" % random.randint(1,1000000)
-            kvmsg['ttl'] = random.randint(0,30)
+            kvmsg.key = SUBTREE + "%d" % random.randint(1, 10000)
+            kvmsg.body = "%d" % random.randint(1, 1000000)
+            kvmsg['ttl'] = random.randint(0, 30)
+            print "I: pushing update: %s" % kvmsg
             kvmsg.send(publisher)
             kvmsg.store(kvmap)
             alarm = time.time() + 1.

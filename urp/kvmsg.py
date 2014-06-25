@@ -6,12 +6,13 @@ Author: Min RK <benjaminrk@gmail.com>
 
 """
 
-import struct # for packing integers
+import struct  # for packing integers
 import sys
 from uuid import uuid4
 
 import zmq
 # zmq.jsonapi ensures bytes, instead of unicode:
+
 
 def encode_properties(properties_dict):
     prop_s = ""
@@ -28,11 +29,21 @@ def decode_properties(prop_s):
         try:
             key, value = line.split("=")
             prop[key] = value
-        except ValueError as e:
-            #Catch empty line
+        except ValueError as ex:
+            # Catch empty line
             pass
 
     return prop
+
+
+def printable_properties(properties_dict):
+    prop_s = ""
+    first = True
+    for key, value in properties_dict.items():
+        prop_s += "%s%s=%s" % ("" if first else ";", key, value)
+        first = False
+    return prop_s
+
 
 class KVMsg(object):
     """
@@ -45,7 +56,7 @@ class KVMsg(object):
     """
     key = None
     sequence = 0
-    uuid=None
+    uuid = None
     properties = None
     body = None
 
@@ -70,7 +81,7 @@ class KVMsg(object):
         return self.properties.get(k, default)
 
     def store(self, dikt):
-        """Store me in a dict if I have anything to store 
+        """Store me in a dict if I have anything to store
         else delete me from the dict."""
         if self.key is not None and self.body is not None:
             dikt[self.key] = self
@@ -78,12 +89,13 @@ class KVMsg(object):
             del dikt[self.key]
 
     def send(self, socket):
-        """Send key-value message to socket; any empty frames are sent as such."""
+        """Send key-value message to socket;
+        any empty frames are sent as such."""
         key = '' if self.key is None else self.key
         seq_s = struct.pack('!q', self.sequence)
         body = '' if self.body is None else self.body
         prop_s = encode_properties(self.properties)
-        socket.send_multipart([ key, seq_s, self.uuid, prop_s, body ])
+        socket.send_multipart([key, seq_s, self.uuid, prop_s, body])
 
     @classmethod
     def recv(cls, socket):
@@ -95,36 +107,36 @@ class KVMsg(object):
         """Construct key-value message from a multipart message"""
         key, seq_s, uuid, prop_s, body = msg
         key = key if key else None
-        seq = struct.unpack('!q',seq_s)[0]
+        seq = struct.unpack('!q', seq_s)[0]
         body = body if body else None
         prop = decode_properties(prop_s)
         return cls(seq, uuid=uuid, key=key, properties=prop, body=body)
-    
+
     def __repr__(self):
         if self.body is None:
             size = 0
-            data='NULL'
+            data = 'NULL'
         else:
             size = len(self.body)
             data = repr(self.body)
-        
+
         mstr = "[seq:{seq}][key:{key}][size:{size}][props:{props}][data:{data}]".format(
             seq=self.sequence,
             # uuid=hexlify(self.uuid),
             key=self.key,
             size=size,
-            props=encode_properties(self.properties),
+            props=printable_properties(self.properties),
             data=data,
         )
         return mstr
-        
-    
+
     def dump(self):
         print >> sys.stderr, "<<", str(self), ">>"
+
+
 # ---------------------------------------------------------------------
 # Runs self test of class
-
-def test_kvmsg (verbose):
+def test_kvmsg(verbose):
     print " * kvmsg: ",
 
     # Prepare our context and sockets
@@ -150,7 +162,7 @@ def test_kvmsg (verbose):
     assert kvmsg2.key == "key"
     kvmsg2.store(kvmap)
 
-    assert len(kvmap) == 1 # shouldn't be different
+    assert len(kvmap) == 1  # shouldn't be different
 
     # test send/recv with properties:
     kvmsg = KVMsg(2, key="key", body="body")

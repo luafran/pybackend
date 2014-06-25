@@ -14,6 +14,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from kvmsg import KVMsg
 from zhelpers import dump
 
+
 # simple struct for routing information for a key-value snapshot
 class Route:
     def __init__(self, socket, identity, subtree):
@@ -30,6 +31,7 @@ def send_single(key, kvmsg, route):
         route.socket.send(route.identity, zmq.SNDMORE)
         kvmsg.send(route.socket)
 
+
 class CloneServer(object):
 
     # Our server is defined by these properties
@@ -42,14 +44,14 @@ class CloneServer(object):
     publisher = None            # Publish updates to clients
     collector = None            # Collect updates from clients
 
-    def __init__(self, port=5556):
+    def __init__(self, loop=IOLoop.instance(), port=5556):
         self.port = port
         self.ctx = zmq.Context()
         self.kvmap = {}
-        self.loop = IOLoop.instance()
+        self.loop = loop
 
         # Set up our clone server sockets
-        self.snapshot  = self.ctx.socket(zmq.ROUTER)
+        self.snapshot = self.ctx.socket(zmq.ROUTER)
         self.publisher = self.ctx.socket(zmq.PUB)
         self.collector = self.ctx.socket(zmq.PULL)
         self.snapshot.bind("tcp://*:%d" % self.port)
@@ -67,9 +69,9 @@ class CloneServer(object):
         self.flush_callback = PeriodicCallback(self.flush_ttl, 1000)
 
         # basic log formatting:
-        logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
-                level=logging.INFO)
-
+        logging.basicConfig(format="%(asctime)s %(message)s",
+                            datefmt="%Y-%m-%d %H:%M:%S",
+                            level=logging.INFO)
 
     def start(self):
         # Run reactor until process interrupted
@@ -81,6 +83,8 @@ class CloneServer(object):
 
     def handle_snapshot(self, msg):
         """snapshot requests"""
+
+        logging.info("I: received state request on snapshot: %s" % msg)
         if len(msg) != 3 or msg[1] != "ICANHAZ?":
             print "E: bad request, aborting"
             dump(msg)
@@ -92,32 +96,34 @@ class CloneServer(object):
             route = Route(self.snapshot, identity, subtree)
 
             # For each entry in kvmap, send kvmsg to client
-            for k,v in self.kvmap.items():
-                send_single(k,v,route)
+            for k, v in self.kvmap.items():
+                logging.info("I: Sending snapshot: %s" % v)
+                send_single(k, v, route)
 
             # Now send END message with sequence number
-            logging.info("I: Sending state shapshot=%d" % self.sequence)
             self.snapshot.send(identity, zmq.SNDMORE)
             kvmsg = KVMsg(self.sequence)
             kvmsg.key = "KTHXBAI"
             kvmsg.body = subtree
+            logging.info("I: Sending snapshot end message: %s" % kvmsg)
             kvmsg.send(self.snapshot)
 
     def handle_collect(self, msg):
         """Collect updates from clients"""
         kvmsg = KVMsg.from_msg(msg)
+        logging.info("I: received state update on collector: %s" % kvmsg)
         self.sequence += 1
         kvmsg.sequence = self.sequence
+        logging.info("I: publishing update: %s", kvmsg)
         kvmsg.send(self.publisher)
         ttl = kvmsg.get('ttl')
         if ttl is not None:
-            kvmsg['ttl'] = time.time() + ttl
+            kvmsg['ttl'] = time.time() + int(ttl)
         kvmsg.store(self.kvmap)
-        logging.info("I: publishing update=%d", self.sequence)
 
     def flush_ttl(self):
         """Purge ephemeral values that have expired"""
-        for key,kvmsg in self.kvmap.items():
+        for key, kvmsg in self.kvmap.items():
             self.flush_single(kvmsg)
 
     def flush_single(self, kvmsg):
@@ -127,13 +133,6 @@ class CloneServer(object):
             kvmsg.body = ""
             self.sequence += 1
             kvmsg.sequence = self.sequence
+            logging.info("I: publishing delete: %s", kvmsg)
             kvmsg.send(self.publisher)
             del self.kvmap[kvmsg.key]
-            logging.info("I: publishing delete=%d", self.sequence)
-
-def main():
-    clone = CloneServer()
-    clone.start()
-
-if __name__ == '__main__':
-    main()
