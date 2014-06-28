@@ -1,9 +1,15 @@
 argparse==1.2.1
+astroid==1.1.1
 backports.ssl-match-hostname==3.4.0.2
+coverage==3.7.1
 distribute==0.6.24
 greenlet==0.4.2
+logilab-common==0.61.0
+mock==1.0.1
 motor==0.3
+pylint==1.2.1
 pymongo==2.7.1
 pyzmq==14.3.1
 tornado==3.2.2
 wsgiref==0.1.2
+xmlrunner==1.7.4
