@@ -16,7 +16,7 @@
 
 import unittest
 import mock
-import src.util.breaker as breaker
+import pyuss.util.breaker as breaker
 
 
 class Clock(object):

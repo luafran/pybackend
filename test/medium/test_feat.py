@@ -1,6 +1,6 @@
 import os
 import unittest
-import src.test.utils.mongod as mongod
+import test.utils.mongod as mongod
 
 
 class TestMedium(unittest.TestCase):

@@ -3,8 +3,8 @@ scriptname=`basename $0`
 
 echo "--------> $scriptname"
 
-src_dir=./src
-test_dir=./src/test
+src_dir=./pyuss
+test_dir=./test
 result_dir=unit_test-results
 report_dir=$PWD/coverage-report
 rm -rf $result_dir

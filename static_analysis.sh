@@ -6,7 +6,7 @@ echo "--------> $scriptname"
 #echo "WARNING: Disabled pylint"
 #exit 0
 
-src_dir=./src
+src_dir=./pyuss
 
 cd $src_dir
 echo "Analyzing $(pwd) dir..."
